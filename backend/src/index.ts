@@ -61,3 +61,5 @@ app.listen(PORT, () => {
   console.log(`🚀 FIN TRACK API Server is running on port ${PORT}`);
   console.log(`🔗 Health Check: http://localhost:${PORT}/api/health`);
 });
+
+export default app;
