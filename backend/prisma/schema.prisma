@@ -1,0 +1,125 @@
+datasource db {
+  provider = "cockroachdb"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String         @id // Firebase UID
+  email         String         @unique
+  name          String?
+  mobileNumber  String?
+  currency      String         @default("INR")
+  theme         String         @default("light")
+  language      String         @default("en")
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  accounts      Account[]
+  categories    Category[]
+  transactions  Transaction[]
+  budgets       Budget[]
+  savingsGoals  SavingsGoal[]
+  bills         Bill[]
+  notifications Notification[]
+}
+
+model Account {
+  id             String        @id @default(uuid())
+  name           String
+  type           String        // CASH, BANK, CREDIT_CARD, DEBIT_CARD, WALLET, UPI
+  balance        Float         @default(0.0)
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions   Transaction[] @relation("SourceAccount")
+  toTransactions Transaction[] @relation("DestinationAccount")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+}
+
+model Category {
+  id           String        @id @default(uuid())
+  name         String
+  type         String        // INCOME, EXPENSE
+  icon         String        // Lucide icon name (e.g. "shopping-cart")
+  color        String        // Hex color string (e.g. "#3B82F6")
+  userId       String?       // Null for default system categories
+  user         User?         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([name, userId])
+}
+
+model Transaction {
+  id           String    @id @default(uuid())
+  type         String    // INCOME, EXPENSE, TRANSFER
+  amount       Float
+  date         DateTime  @default(now())
+  notes        String?
+  receiptUrl   String?
+  accountId    String?   // Source account (or income account)
+  account      Account?  @relation("SourceAccount", fields: [accountId], references: [id], onDelete: Cascade)
+  toAccountId  String?   // Target account (only for transfers)
+  toAccount    Account?  @relation("DestinationAccount", fields: [toAccountId], references: [id], onDelete: Cascade)
+  categoryId   String?   // Category (only for INCOME or EXPENSE)
+  category     Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Budget {
+  id         String    @id @default(uuid())
+  amount     Float
+  period     String    // WEEKLY, MONTHLY
+  categoryId String?   // Null means overall budget for the period
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  startDate  DateTime
+  endDate    DateTime
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model SavingsGoal {
+  id           String   @id @default(uuid())
+  name         String
+  targetAmount Float
+  savedAmount  Float    @default(0.0)
+  deadline     DateTime
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Bill {
+  id          String   @id @default(uuid())
+  name        String
+  amount      Float
+  dueDate     DateTime
+  status      String   @default("UNPAID") // PAID, UNPAID
+  isRecurring Boolean  @default(false)
+  frequency   String?  // WEEKLY, MONTHLY, YEARLY
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  type      String   // BUDGET_WARNING, BILL_DUE, GOAL_REMINDER
+  message   String
+  isRead    Boolean  @default(false)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
