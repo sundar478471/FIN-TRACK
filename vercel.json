@@ -3,14 +3,14 @@
   "buildCommand": "cd frontend && npm install && npm run build",
   "outputDirectory": "frontend/dist",
   "functions": {
-    "backend/api/index.ts": {
+    "api/index.ts": {
       "includeFiles": "backend/prisma/schema.prisma"
     }
   },
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/backend/api/index.ts"
+      "destination": "/api/index.ts"
     },
     {
       "source": "/(.*)",
