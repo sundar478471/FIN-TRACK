@@ -62,7 +62,7 @@ app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
 if (!process.env.VERCEL) {
   app.listen(PORT, () => {
     console.log(`🚀 FIN TRACK API Server is running on port ${PORT}`);
-    console.log(`🔗 Health Check: http://localhost:${PORT}/api/health`);
+    console.log(`🔗 Health Check: /api/health`);
   });
 }
 

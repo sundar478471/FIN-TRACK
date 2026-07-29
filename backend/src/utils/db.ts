@@ -40,7 +40,7 @@ export const DEFAULT_CATEGORIES = [
   { name: 'Others', type: 'EXPENSE', icon: 'HelpCircle', color: '#1E3A8A' }
 ];
 
-const hasDbUrl = !!process.env.DATABASE_URL && process.env.DATABASE_URL !== 'postgresql://username:password@localhost:26257/fintrack?schema=public';
+const hasDbUrl = !!process.env.DATABASE_URL && !process.env.DATABASE_URL.includes('postgresql://username:password@');
 let prisma: PrismaClient | null = null;
 
 if (hasDbUrl) {
