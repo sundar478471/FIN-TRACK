@@ -32,6 +32,11 @@ lerna-debug.log*
 db.json
 **/db.json
 
+# Firebase Private Keys
+*firebase-adminsdk*.json
+service-account.json
+
+
 # Operating System files
 .DS_Store
 Thumbs.db

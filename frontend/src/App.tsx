@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { FinanceProvider } from './context/FinanceContext';
 import { Layout } from './components/Layout';
@@ -16,9 +16,64 @@ import { Reports } from './components/Reports';
 import { Profile } from './components/Profile';
 import { Loader2 } from 'lucide-react';
 
+// Custom lightweight hook for URL location tracking and routing
+const useLocationPath = () => {
+  const [path, setPath] = useState(window.location.pathname);
+
+  useEffect(() => {
+    const handleLocationChange = () => {
+      setPath(window.location.pathname);
+    };
+
+    window.addEventListener('popstate', handleLocationChange);
+    
+    // Intercept manual pushState and replaceState calls to update React state
+    const originalPushState = window.history.pushState;
+    const originalReplaceState = window.history.replaceState;
+
+    window.history.pushState = function (...args) {
+      originalPushState.apply(this, args);
+      handleLocationChange();
+    };
+
+    window.history.replaceState = function (...args) {
+      originalReplaceState.apply(this, args);
+      handleLocationChange();
+    };
+
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.history.pushState = originalPushState;
+      window.history.replaceState = originalReplaceState;
+    };
+  }, []);
+
+  const navigate = (newPath: string) => {
+    window.history.pushState({}, '', newPath);
+  };
+
+  return [path, navigate] as const;
+};
+
+const pathToTab = (path: string): string => {
+  const clean = path.replace(/^\//, ''); // remove leading slash
+  if (!clean || clean === 'dashboard') return 'dashboard';
+  return clean;
+};
+
+const tabToPath = (tab: string): string => {
+  if (tab === 'dashboard') return '/dashboard';
+  return `/${tab}`;
+};
+
 const MainAppContent: React.FC = () => {
   const { user, loading } = useAuth();
-  const [currentTab, setCurrentTab] = useState('dashboard');
+  const [path, navigate] = useLocationPath();
+
+  const currentTab = pathToTab(path);
+  const setCurrentTab = (tab: string) => {
+    navigate(tabToPath(tab));
+  };
 
   if (loading) {
     return (

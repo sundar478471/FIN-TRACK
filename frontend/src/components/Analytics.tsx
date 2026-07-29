@@ -128,10 +128,17 @@ export const Analytics: React.FC = () => {
     // Chart 1: Income vs Expense Pie Chart
     if (incExpRef.current) {
       destroyChart('incExp');
+      const total = totalIncome + totalExpense;
+      const incPct = total > 0 ? ((totalIncome / total) * 100).toFixed(1) : '0';
+      const expPct = total > 0 ? ((totalExpense / total) * 100).toFixed(1) : '0';
+
       chartInstances.current['incExp'] = new Chart(incExpRef.current, {
         type: 'pie',
         data: {
-          labels: ['Income', 'Expense'],
+          labels: [
+            `Income (${currencySymbol}${totalIncome.toLocaleString()} - ${incPct}%)`,
+            `Expense (${currencySymbol}${totalExpense.toLocaleString()} - ${expPct}%)`
+          ],
           datasets: [{
             data: [totalIncome, totalExpense],
             backgroundColor: ['#10b981', '#ef4444'],
@@ -141,7 +148,16 @@ export const Analytics: React.FC = () => {
         options: {
           responsive: true,
           plugins: {
-            legend: { position: 'bottom' }
+            legend: { position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: function(context: any) {
+                  const value = context.parsed;
+                  const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+                  return ` ${context.label.split(' (')[0]}: ₹${value.toLocaleString()} (${pct}%)`;
+                }
+              }
+            }
           }
         }
       });
@@ -150,10 +166,17 @@ export const Analytics: React.FC = () => {
     // Chart 2: Category Breakdown Donut Chart
     if (catBreakRef.current && categoryNames.length > 0) {
       destroyChart('catBreak');
+      const categoryTotal = categoryAmounts.reduce((a, b) => a + b, 0);
+      const labelsWithPct = categoryNames.map((name, i) => {
+        const amt = categoryAmounts[i];
+        const pct = categoryTotal > 0 ? ((amt / categoryTotal) * 100).toFixed(1) : '0';
+        return `${name} (${currencySymbol}${amt.toLocaleString()} - ${pct}%)`;
+      });
+
       chartInstances.current['catBreak'] = new Chart(catBreakRef.current, {
         type: 'doughnut',
         data: {
-          labels: categoryNames,
+          labels: labelsWithPct,
           datasets: [{
             data: categoryAmounts,
             backgroundColor: categoryColors,
@@ -163,7 +186,16 @@ export const Analytics: React.FC = () => {
         options: {
           responsive: true,
           plugins: {
-            legend: { position: 'bottom' }
+            legend: { position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: function(context: any) {
+                  const value = context.parsed;
+                  const pct = categoryTotal > 0 ? ((value / categoryTotal) * 100).toFixed(1) : '0';
+                  return ` ${context.label.split(' (')[0]}: ₹${value.toLocaleString()} (${pct}%)`;
+                }
+              }
+            }
           }
         }
       });
@@ -172,6 +204,8 @@ export const Analytics: React.FC = () => {
     // Chart 3: Monthly Spending Bar Chart
     if (monthlySpendRef.current) {
       destroyChart('monthlySpend');
+      const totalMonthlyExpenses = last6Months.reduce((sum, m) => sum + m.expense, 0);
+
       chartInstances.current['monthlySpend'] = new Chart(monthlySpendRef.current, {
         type: 'bar',
         data: {
@@ -186,6 +220,17 @@ export const Analytics: React.FC = () => {
           responsive: true,
           scales: {
             y: { beginAtZero: true }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context: any) {
+                  const value = context.parsed.y;
+                  const pct = totalMonthlyExpenses > 0 ? ((value / totalMonthlyExpenses) * 100).toFixed(1) : '0';
+                  return ` Expenses: ₹${value.toLocaleString()} (${pct}% of total)`;
+                }
+              }
+            }
           }
         }
       });
@@ -194,6 +239,9 @@ export const Analytics: React.FC = () => {
     // Chart 4: Cash Flow Line Chart (Income vs Expense)
     if (cashFlowRef.current) {
       destroyChart('cashFlow');
+      const totalIncomePeriod = last6Months.reduce((sum, m) => sum + m.income, 0);
+      const totalExpensePeriod = last6Months.reduce((sum, m) => sum + m.expense, 0);
+
       chartInstances.current['cashFlow'] = new Chart(cashFlowRef.current, {
         type: 'line',
         data: {
@@ -219,6 +267,19 @@ export const Analytics: React.FC = () => {
           responsive: true,
           scales: {
             y: { beginAtZero: true }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context: any) {
+                  const label = context.dataset.label;
+                  const value = context.parsed.y;
+                  const total = label === 'Income' ? totalIncomePeriod : totalExpensePeriod;
+                  const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+                  return ` ${label}: ₹${value.toLocaleString()} (${pct}% of total)`;
+                }
+              }
+            }
           }
         }
       });
@@ -227,6 +288,8 @@ export const Analytics: React.FC = () => {
     // Chart 5: Savings Trend Line Chart
     if (savingsRef.current) {
       destroyChart('savings');
+      const finalSavings = savingsHistoryData[savingsHistoryData.length - 1] || 1;
+
       chartInstances.current['savings'] = new Chart(savingsRef.current, {
         type: 'line',
         data: {
@@ -244,6 +307,17 @@ export const Analytics: React.FC = () => {
           responsive: true,
           scales: {
             y: { beginAtZero: true }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context: any) {
+                  const value = context.parsed.y;
+                  const pct = finalSavings !== 0 ? ((value / finalSavings) * 100).toFixed(1) : '0';
+                  return ` Balance: ₹${value.toLocaleString()} (${pct}% of final)`;
+                }
+              }
+            }
           }
         }
       });
@@ -252,6 +326,8 @@ export const Analytics: React.FC = () => {
     // Chart 6: Weekly Spending Bar Chart
     if (weeklyRef.current) {
       destroyChart('weekly');
+      const totalWeeklyExpenses = last7Days.reduce((sum, d) => sum + d.amount, 0);
+
       chartInstances.current['weekly'] = new Chart(weeklyRef.current, {
         type: 'bar',
         data: {
@@ -266,6 +342,17 @@ export const Analytics: React.FC = () => {
           responsive: true,
           scales: {
             y: { beginAtZero: true }
+          },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                label: function(context: any) {
+                  const value = context.parsed.y;
+                  const pct = totalWeeklyExpenses > 0 ? ((value / totalWeeklyExpenses) * 100).toFixed(1) : '0';
+                  return ` Expense: ₹${value.toLocaleString()} (${pct}% of week)`;
+                }
+              }
+            }
           }
         }
       });

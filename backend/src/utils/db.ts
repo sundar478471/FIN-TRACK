@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import { PrismaLibSQL } from '@prisma/adapter-libsql';
+import { createClient } from '@libsql/client';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -43,8 +45,19 @@ let prisma: PrismaClient | null = null;
 
 if (hasDbUrl) {
   try {
-    prisma = new PrismaClient();
-    console.log('⚡ CockroachDB Prisma Client initialized.');
+    const dbUrl = process.env.DATABASE_URL!;
+    if (dbUrl.startsWith('libsql://') || dbUrl.startsWith('https://')) {
+      const libsql = createClient({
+        url: dbUrl,
+        authToken: process.env.DATABASE_AUTH_TOKEN || '',
+      });
+      const adapter = new PrismaLibSQL(libsql);
+      prisma = new PrismaClient({ adapter });
+      console.log('⚡ Turso/LibSQL Prisma Client initialized.');
+    } else {
+      prisma = new PrismaClient();
+      console.log('⚡ SQLite Prisma Client initialized.');
+    }
   } catch (err) {
     console.error('❌ Failed to initialize Prisma Client, falling back to Local JSON DB.', err);
     prisma = null;
@@ -53,7 +66,9 @@ if (hasDbUrl) {
   console.log('⚠️ DATABASE_URL not set or default placeholder detected. Operating in Local JSON Mock Mode.');
 }
 
-const JSON_DB_PATH = path.join(__dirname, '../../db.json');
+const JSON_DB_PATH = process.env.VERCEL
+  ? path.join('/tmp', 'db.json')
+  : path.join(__dirname, '../../db.json');
 
 // Interface for local database storage
 interface LocalDbSchema {
@@ -69,7 +84,7 @@ interface LocalDbSchema {
 
 function initJsonDb() {
   if (!fs.existsSync(JSON_DB_PATH)) {
-    const initialData: LocalDbSchema = {
+    let initialData: LocalDbSchema = {
       users: [],
       accounts: [],
       categories: [],
@@ -79,6 +94,18 @@ function initJsonDb() {
       bills: [],
       notifications: []
     };
+
+    if (process.env.VERCEL) {
+      const bundleDbPath = path.join(__dirname, '../../db.json');
+      if (fs.existsSync(bundleDbPath)) {
+        try {
+          initialData = JSON.parse(fs.readFileSync(bundleDbPath, 'utf-8'));
+        } catch (err) {
+          console.error('Error reading bundle DB:', err);
+        }
+      }
+    }
+
     fs.writeFileSync(JSON_DB_PATH, JSON.stringify(initialData, null, 2), 'utf-8');
   }
 }

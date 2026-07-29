@@ -188,17 +188,48 @@ export const SavingsGoals: React.FC = () => {
                       {isCompleted ? '🎉 Goal Completed!' : `Remaining: ${formatMoney(remaining)}`}
                     </span>
                   </div>
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: '50%',
-                    backgroundColor: isCompleted ? 'var(--success-light)' : 'var(--primary-light)',
-                    color: isCompleted ? 'var(--success)' : 'var(--primary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    <Target size={20} />
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: '50%',
+                      backgroundColor: isCompleted ? 'var(--success-light)' : 'var(--primary-light)',
+                      color: isCompleted ? 'var(--success)' : 'var(--primary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      <Target size={20} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: '4px', transition: 'color var(--transition-fast)' }}
+                        onClick={() => handleOpenEdit(g)}
+                        title="Edit Goal"
+                        className="btn-icon"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      {!isCompleted && (
+                        <button 
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--success)', display: 'flex', alignItems: 'center', padding: '4px', transition: 'color var(--transition-fast)' }}
+                          onClick={() => handleOpenDeposit(g)}
+                          title="Save Money"
+                          className="btn-icon"
+                        >
+                          <PiggyBank size={16} />
+                        </button>
+                      )}
+                      <button 
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', display: 'flex', alignItems: 'center', padding: '4px', transition: 'color var(--transition-fast)' }}
+                        onClick={() => handleDelete(g)}
+                        title="Delete Goal"
+                        className="btn-icon"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -223,24 +254,6 @@ export const SavingsGoals: React.FC = () => {
                   <span style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
                     {getDaysRemaining(g.deadline)}
                   </span>
-                </div>
-
-                <div style={{ display: 'flex', gap: '10px', borderTop: '1px solid var(--border-color)', paddingTop: '12px', marginTop: 'auto' }}>
-                  <button className="btn btn-secondary btn-sm" style={{ flex: 1, padding: '8px' }} onClick={() => handleOpenEdit(g)}>
-                    <Edit2 size={14} /> Edit
-                  </button>
-                  {!isCompleted && (
-                    <button 
-                      className="btn btn-primary btn-sm" 
-                      style={{ flex: 1, padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', backgroundColor: 'var(--success)', border: 'none', color: '#fff' }} 
-                      onClick={() => handleOpenDeposit(g)}
-                    >
-                      <PiggyBank size={14} /> Save Money
-                    </button>
-                  )}
-                  <button className="btn btn-danger btn-sm" style={{ padding: '8px 12px' }} onClick={() => handleDelete(g)}>
-                    <Trash2 size={14} />
-                  </button>
                 </div>
               </div>
             );

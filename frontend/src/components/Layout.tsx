@@ -21,6 +21,22 @@ export const Layout: React.FC<LayoutProps> = ({ currentTab, setCurrentTab, child
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const userDropdownRef = useRef<HTMLDivElement | null>(null);
 
+  const [avatar, setAvatar] = useState<string | null>(localStorage.getItem('fintrack_avatar'));
+
+  useEffect(() => {
+    const handleAvatarUpdate = () => {
+      setAvatar(localStorage.getItem('fintrack_avatar'));
+    };
+
+    window.addEventListener('avatar_updated', handleAvatarUpdate);
+    window.addEventListener('storage', handleAvatarUpdate);
+
+    return () => {
+      window.removeEventListener('avatar_updated', handleAvatarUpdate);
+      window.removeEventListener('storage', handleAvatarUpdate);
+    };
+  }, []);
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -111,8 +127,12 @@ export const Layout: React.FC<LayoutProps> = ({ currentTab, setCurrentTab, child
 
         <div className="sidebar-footer">
           <div className="user-profile-summary" style={{ paddingBottom: '0px' }}>
-            <div className="user-avatar">
-              {user?.email?.charAt(0).toUpperCase() || 'U'}
+            <div className="user-avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {avatar ? (
+                <img src={avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                user?.email?.charAt(0).toUpperCase() || 'U'
+              )}
             </div>
             <div className="user-details">
               <div className="name">Active User</div>
@@ -210,8 +230,12 @@ export const Layout: React.FC<LayoutProps> = ({ currentTab, setCurrentTab, child
             style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', position: 'relative' }}
             onClick={() => setIsUserDropdownOpen(!isUserDropdownOpen)}
           >
-            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem' }}>
-              {user?.email?.charAt(0).toUpperCase() || 'U'}
+            <div style={{ width: '32px', height: '32px', borderRadius: '50%', backgroundColor: 'var(--primary)', color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem', overflow: 'hidden' }}>
+              {avatar ? (
+                <img src={avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ) : (
+                user?.email?.charAt(0).toUpperCase() || 'U'
+              )}
             </div>
             <span style={{ fontSize: '0.9rem', fontWeight: 700, color: 'var(--text-secondary)' }}>{user?.email}</span>
 

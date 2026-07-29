@@ -35,7 +35,9 @@ app.get('/api/health', (req: Request, res: Response) => {
   res.json({
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    databaseMode: process.env.DATABASE_URL ? 'CockroachDB' : 'Local JSON File'
+    databaseMode: process.env.DATABASE_URL
+      ? (process.env.DATABASE_URL.startsWith('libsql://') || process.env.DATABASE_URL.startsWith('https://') ? 'Turso' : 'SQLite')
+      : 'Local JSON File'
   });
 });
 
@@ -57,9 +59,11 @@ app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
 });
 
 // Start listening
-app.listen(PORT, () => {
-  console.log(`🚀 FIN TRACK API Server is running on port ${PORT}`);
-  console.log(`🔗 Health Check: http://localhost:${PORT}/api/health`);
-});
+if (!process.env.VERCEL) {
+  app.listen(PORT, () => {
+    console.log(`🚀 FIN TRACK API Server is running on port ${PORT}`);
+    console.log(`🔗 Health Check: http://localhost:${PORT}/api/health`);
+  });
+}
 
 export default app;

@@ -1,14 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useFinance } from '../context/FinanceContext';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import { Download, Calendar } from 'lucide-react';
+import { Chart, registerables } from 'chart.js/auto';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+Chart.register(...registerables);
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 export const Reports: React.FC = () => {
   const { token } = useAuth();
+  const { transactions, categories, accounts } = useFinance();
 
   const [reportType, setReportType] = useState<'monthly' | 'yearly' | 'custom'>('monthly');
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth());
@@ -17,6 +22,345 @@ export const Reports: React.FC = () => {
   // Custom dates
   const [startDate, setStartDate] = useState(new Date(new Date().setDate(1)).toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Chart canvas refs
+  const incExpPieRef = useRef<HTMLCanvasElement | null>(null);
+  const catDonutRef = useRef<HTMLCanvasElement | null>(null);
+  const trendBarRef = useRef<HTMLCanvasElement | null>(null);
+  const cashFlowBarRef = useRef<HTMLCanvasElement | null>(null);
+  const chartInstances = useRef<Record<string, Chart | null>>({});
+
+  const start = reportType === 'monthly' 
+    ? new Date(selectedYear, selectedMonth, 1).toISOString().split('T')[0]
+    : reportType === 'yearly'
+      ? new Date(selectedYear, 0, 1).toISOString().split('T')[0]
+      : startDate;
+
+  const end = reportType === 'monthly'
+    ? new Date(selectedYear, selectedMonth + 1, 0).toISOString().split('T')[0]
+    : reportType === 'yearly'
+      ? new Date(selectedYear, 12, 0).toISOString().split('T')[0]
+      : endDate;
+
+  const startTime = new Date(start + 'T00:00:00').getTime();
+  const endTime = new Date(end + 'T23:59:59').getTime();
+
+  const filteredTxs = transactions.filter(t => {
+    const tTime = new Date(t.date).getTime();
+    return tTime >= startTime && tTime <= endTime;
+  });
+
+  const hasExpenseData = filteredTxs.some(t => t.type === 'EXPENSE' && t.categoryId);
+
+  // Render charts dynamically matching report criteria
+  useEffect(() => {
+    const destroyChart = (key: string) => {
+      if (chartInstances.current[key]) {
+        chartInstances.current[key]?.destroy();
+        chartInstances.current[key] = null;
+      }
+    };
+
+    if (filteredTxs.length === 0) {
+      destroyChart('incExp');
+      destroyChart('catDonut');
+      destroyChart('trendBar');
+      destroyChart('cashFlow');
+      return;
+    }
+
+    // 1. Income vs Expense
+    let incVal = 0;
+    let expVal = 0;
+    filteredTxs.forEach(t => {
+      if (t.type === 'INCOME') incVal += t.amount;
+      if (t.type === 'EXPENSE') expVal += t.amount;
+    });
+
+    if (incExpPieRef.current) {
+      destroyChart('incExp');
+      const total = incVal + expVal;
+      const incPct = total > 0 ? ((incVal / total) * 100).toFixed(1) : '0';
+      const expPct = total > 0 ? ((expVal / total) * 100).toFixed(1) : '0';
+
+      chartInstances.current['incExp'] = new Chart(incExpPieRef.current, {
+        type: 'pie',
+        data: {
+          labels: [
+            `Income (${currencySymbol}${incVal.toLocaleString()} - ${incPct}%)`,
+            `Expense (${currencySymbol}${expVal.toLocaleString()} - ${expPct}%)`
+          ],
+          datasets: [{
+            data: [incVal, expVal],
+            backgroundColor: ['#10B981', '#EF4444'],
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: function(context: any) {
+                  const value = context.parsed;
+                  const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+                  return ` ${context.label.split(' (')[0]}: ₹${value.toLocaleString()} (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 2. Category breakdown
+    const catMap: Record<string, { name: string; amount: number; color: string }> = {};
+    filteredTxs.forEach(t => {
+      if (t.type !== 'EXPENSE' || !t.categoryId) return;
+      const cat = categories.find(c => c.id === t.categoryId);
+      if (!cat) return;
+      if (!catMap[t.categoryId]) {
+        catMap[t.categoryId] = {
+          name: cat.name,
+          amount: 0,
+          color: cat.color || '#64748b'
+        };
+      }
+      catMap[t.categoryId].amount += t.amount;
+    });
+
+    const catNames = Object.values(catMap).map(c => c.name);
+    const catAmounts = Object.values(catMap).map(c => c.amount);
+    const catColors = Object.values(catMap).map(c => c.color);
+
+    if (catDonutRef.current && catNames.length > 0) {
+      destroyChart('catDonut');
+      const categoryTotal = catAmounts.reduce((a, b) => a + b, 0);
+      const labelsWithPct = catNames.map((name, i) => {
+        const amt = catAmounts[i];
+        const pct = categoryTotal > 0 ? ((amt / categoryTotal) * 100).toFixed(1) : '0';
+        return `${name} (${currencySymbol}${amt.toLocaleString()} - ${pct}%)`;
+      });
+
+      chartInstances.current['catDonut'] = new Chart(catDonutRef.current, {
+        type: 'doughnut',
+        data: {
+          labels: labelsWithPct,
+          datasets: [{
+            data: catAmounts,
+            backgroundColor: catColors,
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: function(context: any) {
+                  const value = context.parsed;
+                  const pct = categoryTotal > 0 ? ((value / categoryTotal) * 100).toFixed(1) : '0';
+                  return ` ${context.label.split(' (')[0]}: ₹${value.toLocaleString()} (${pct}%)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 3. Trend
+    const dayDiff = Math.ceil((endTime - startTime) / (1000 * 60 * 60 * 24));
+    let trendLabels: string[] = [];
+    let trendIncome: number[] = [];
+    let trendExpense: number[] = [];
+
+    if (reportType === 'yearly') {
+      const yearlyTrend = Array.from({ length: 12 }, (_, i) => ({
+        label: new Date(selectedYear, i).toLocaleString('default', { month: 'short' }),
+        income: 0,
+        expense: 0
+      }));
+      filteredTxs.forEach(t => {
+        const tDate = new Date(t.date);
+        if (tDate.getFullYear() === selectedYear) {
+          const monthIdx = tDate.getMonth();
+          if (t.type === 'INCOME') yearlyTrend[monthIdx].income += t.amount;
+          if (t.type === 'EXPENSE') yearlyTrend[monthIdx].expense += t.amount;
+        }
+      });
+      trendLabels = yearlyTrend.map(x => x.label);
+      trendIncome = yearlyTrend.map(x => x.income);
+      trendExpense = yearlyTrend.map(x => x.expense);
+    } else if (dayDiff <= 31) {
+      const intervalsCount = 4;
+      const daysPerInterval = Math.ceil(dayDiff / intervalsCount);
+      for (let i = 0; i < intervalsCount; i++) {
+        const curStart = new Date(startTime + i * daysPerInterval * 24 * 60 * 60 * 1000);
+        const curEnd = new Date(Math.min(endTime, startTime + (i + 1) * daysPerInterval * 24 * 60 * 60 * 1000 - 1000));
+        trendLabels.push(`Wk ${i + 1} (${curStart.getDate()}/${curStart.getMonth() + 1})`);
+        
+        let inc = 0;
+        let exp = 0;
+        filteredTxs.forEach(t => {
+          const tTime = new Date(t.date).getTime();
+          if (tTime >= curStart.getTime() && tTime <= curEnd.getTime()) {
+            if (t.type === 'INCOME') inc += t.amount;
+            if (t.type === 'EXPENSE') exp += t.amount;
+          }
+        });
+        trendIncome.push(inc);
+        trendExpense.push(exp);
+      }
+    } else {
+      const monthsMap: Record<string, { label: string; income: number; expense: number }> = {};
+      filteredTxs.forEach(t => {
+        const tDate = new Date(t.date);
+        const key = `${tDate.getFullYear()}-${tDate.getMonth()}`;
+        if (!monthsMap[key]) {
+          monthsMap[key] = {
+            label: tDate.toLocaleString('default', { month: 'short', year: '2-digit' }),
+            income: 0,
+            expense: 0
+          };
+        }
+        if (t.type === 'INCOME') monthsMap[key].income += t.amount;
+        if (t.type === 'EXPENSE') monthsMap[key].expense += t.amount;
+      });
+      
+      const sortedKeys = Object.keys(monthsMap).sort();
+      trendLabels = sortedKeys.map(k => monthsMap[k].label);
+      trendIncome = sortedKeys.map(k => monthsMap[k].income);
+      trendExpense = sortedKeys.map(k => monthsMap[k].expense);
+    }
+
+    if (trendBarRef.current) {
+      destroyChart('trendBar');
+      const totalIncome = trendIncome.reduce((a, b) => a + b, 0);
+      const totalExpense = trendExpense.reduce((a, b) => a + b, 0);
+
+      chartInstances.current['trendBar'] = new Chart(trendBarRef.current, {
+        type: 'bar',
+        data: {
+          labels: trendLabels,
+          datasets: [
+            {
+              label: 'Income',
+              data: trendIncome,
+              backgroundColor: '#10B981',
+              borderWidth: 1
+            },
+            {
+              label: 'Expense',
+              data: trendExpense,
+              backgroundColor: '#EF4444',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: { grid: { display: false } },
+            y: { beginAtZero: true, grid: { display: false } }
+          },
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: function(context: any) {
+                  const label = context.dataset.label || '';
+                  const value = context.parsed.y;
+                  const total = label === 'Income' ? totalIncome : totalExpense;
+                  const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+                  return ` ${label}: ₹${value.toLocaleString()} (${pct}% of total)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // 4. Account flow
+    const accountFlows = accounts.map(acc => {
+      let inc = 0;
+      let exp = 0;
+      filteredTxs.forEach(t => {
+        if (t.accountId === acc.id) {
+          if (t.type === 'INCOME') inc += t.amount;
+          if (t.type === 'EXPENSE') exp += t.amount;
+        }
+        if (t.type === 'TRANSFER') {
+          if (t.accountId === acc.id) exp += t.amount;
+          if (t.toAccountId === acc.id) inc += t.amount;
+        }
+      });
+      return { name: acc.name, inflow: inc, outflow: exp };
+    });
+
+    if (cashFlowBarRef.current) {
+      destroyChart('cashFlow');
+      const totalInflow = accountFlows.reduce((a, b) => a + b.inflow, 0);
+      const totalOutflow = accountFlows.reduce((a, b) => a + b.outflow, 0);
+
+      chartInstances.current['cashFlow'] = new Chart(cashFlowBarRef.current, {
+        type: 'bar',
+        data: {
+          labels: accountFlows.map(af => af.name),
+          datasets: [
+            {
+              label: 'Inflow',
+              data: accountFlows.map(af => af.inflow),
+              backgroundColor: 'rgba(16, 185, 129, 0.85)',
+              borderWidth: 1
+            },
+            {
+              label: 'Outflow',
+              data: accountFlows.map(af => af.outflow),
+              backgroundColor: 'rgba(239, 68, 68, 0.85)',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          scales: {
+            x: { beginAtZero: true, grid: { display: false } },
+            y: { grid: { display: false } }
+          },
+          plugins: {
+            legend: { position: 'bottom' },
+            tooltip: {
+              callbacks: {
+                label: function(context: any) {
+                  const label = context.dataset.label || '';
+                  const value = context.parsed.x;
+                  const total = label === 'Inflow' ? totalInflow : totalOutflow;
+                  const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+                  return ` ${label}: ₹${value.toLocaleString()} (${pct}% of total)`;
+                }
+              }
+            }
+          }
+        }
+      });
+    }
+
+    return () => {
+      destroyChart('incExp');
+      destroyChart('catDonut');
+      destroyChart('trendBar');
+      destroyChart('cashFlow');
+    };
+  }, [reportType, selectedMonth, selectedYear, startDate, endDate, transactions, categories, accounts, filteredTxs.length]);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -226,9 +570,9 @@ export const Reports: React.FC = () => {
 
       const summaryTableData = [
         ['Metric Description', 'Amount Balance'],
-        ['Total Period Incomes', `${currencySymbol}${data.summary.totalIncome.toFixed(2)}`],
-        ['Total Period Expenses', `${currencySymbol}${data.summary.totalExpense.toFixed(2)}`],
-        ['Net Period Savings Flow', `${currencySymbol}${data.summary.netCashFlow.toFixed(2)}`]
+        ['Total Period Incomes', `Rs. ${data.summary.totalIncome.toFixed(2)}`],
+        ['Total Period Expenses', `Rs. ${data.summary.totalExpense.toFixed(2)}`],
+        ['Net Period Savings Flow', `Rs. ${data.summary.netCashFlow.toFixed(2)}`]
       ];
 
       (doc as any).autoTable({
@@ -248,10 +592,10 @@ export const Reports: React.FC = () => {
       const accountsBody = data.accountSummary.map((a: any) => [
         a.name,
         a.type,
-        `${currencySymbol}${a.startingBalance.toFixed(2)}`,
-        `${currencySymbol}${a.incomeSum.toFixed(2)}`,
-        `${currencySymbol}${a.expenseSum.toFixed(2)}`,
-        `${currencySymbol}${a.endingBalance.toFixed(2)}`
+        `Rs. ${a.startingBalance.toFixed(2)}`,
+        `Rs. ${a.incomeSum.toFixed(2)}`,
+        `Rs. ${a.expenseSum.toFixed(2)}`,
+        `Rs. ${a.endingBalance.toFixed(2)}`
       ]);
 
       (doc as any).autoTable({
@@ -271,7 +615,7 @@ export const Reports: React.FC = () => {
       const categoriesBody = data.categoryBreakdown.map((c: any) => [
         c.name,
         c.type,
-        `${currencySymbol}${c.amount.toFixed(2)}`
+        `Rs. ${c.amount.toFixed(2)}`
       ]);
 
       (doc as any).autoTable({
@@ -291,7 +635,7 @@ export const Reports: React.FC = () => {
       const txBody = data.transactions.map((t: any) => [
         new Date(t.date).toLocaleDateString(),
         t.type,
-        `${currencySymbol}${t.amount.toFixed(2)}`,
+        `Rs. ${t.amount.toFixed(2)}`,
         t.type === 'TRANSFER' ? `${t.accountName} ➔ ${t.toAccountName}` : (t.accountName || ''),
         t.categoryName || '-',
         t.notes || ''
@@ -485,6 +829,61 @@ export const Reports: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Visual Report Dashboard Section */}
+      {filteredTxs.length > 0 ? (
+        <div style={{ marginTop: '40px' }} className="reports-charts-container">
+          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '32px', marginBottom: '24px' }}>
+            <h2 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '6px' }}>Visual Statement Report</h2>
+            <p style={{ color: 'var(--text-secondary)' }}>Visual analytics matching the selected period.</p>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '24px' }} className="reports-charts-grid">
+            {/* Chart 1: Income vs Expense Pie Chart */}
+            <div className="card" style={{ padding: '24px' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)' }}>Income vs Expense</h3>
+              <div style={{ position: 'relative', height: '240px' }}>
+                <canvas ref={incExpPieRef}></canvas>
+              </div>
+            </div>
+
+            {/* Chart 2: Category Expense Allocation */}
+            <div className="card" style={{ padding: '24px' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)' }}>Expenses by Category</h3>
+              <div style={{ position: 'relative', height: '240px' }}>
+                {!hasExpenseData ? (
+                  <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                    No category expense logged in this period.
+                  </div>
+                ) : (
+                  <canvas ref={catDonutRef}></canvas>
+                )}
+              </div>
+            </div>
+
+            {/* Chart 3: Periodic Trend Chart */}
+            <div className="card" style={{ padding: '24px' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)' }}>Periodic Trend</h3>
+              <div style={{ position: 'relative', height: '240px' }}>
+                <canvas ref={trendBarRef}></canvas>
+              </div>
+            </div>
+
+            {/* Chart 4: Account Cash Flow */}
+            <div className="card" style={{ padding: '24px' }}>
+              <h3 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '16px', color: 'var(--text-primary)' }}>Cash Flow by Account</h3>
+              <div style={{ position: 'relative', height: '240px' }}>
+                <canvas ref={cashFlowBarRef}></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="card" style={{ marginTop: '40px', padding: '32px', textAlign: 'center' }}>
+          <p style={{ color: 'var(--text-muted)', margin: 0 }}>No transactions available for the selected period parameters.</p>
+        </div>
+      )}
+
     </div>
   );
 };

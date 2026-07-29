@@ -55,6 +55,7 @@ export const Profile: React.FC = () => {
       const base64String = reader.result as string;
       setAvatar(base64String);
       localStorage.setItem('fintrack_avatar', base64String);
+      window.dispatchEvent(new Event('avatar_updated'));
       setSuccess('Profile photo updated successfully!');
     };
     reader.readAsDataURL(file);

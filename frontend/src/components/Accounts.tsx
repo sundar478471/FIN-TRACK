@@ -130,18 +130,39 @@ export const Accounts: React.FC = () => {
                     </span>
                     <h2 style={{ fontSize: '1.35rem', fontWeight: 800 }}>{acc.name}</h2>
                   </div>
-                  <div style={{
-                    width: '40px',
-                    height: '40px',
-                    borderRadius: 'var(--radius-md)',
-                    backgroundColor: 'var(--bg-secondary)',
-                    border: '1px solid var(--border-color)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'var(--primary)'
-                  }}>
-                    <CreditCard size={20} />
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '10px' }}>
+                    <div style={{
+                      width: '40px',
+                      height: '40px',
+                      borderRadius: 'var(--radius-md)',
+                      backgroundColor: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-color)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: 'var(--primary)'
+                    }}>
+                      <CreditCard size={20} />
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', padding: '4px', transition: 'color var(--transition-fast)' }}
+                        onClick={() => handleOpenEdit(acc)}
+                        title="Edit Account"
+                        className="btn-icon"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button 
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--danger)', display: 'flex', alignItems: 'center', padding: '4px', transition: 'color var(--transition-fast)' }}
+                        onClick={() => handleDelete(acc)}
+                        title="Delete Account"
+                        className="btn-icon"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
                 </div>
 
@@ -157,23 +178,6 @@ export const Accounts: React.FC = () => {
                   }}>
                     {formatMoney(acc.balance)}
                   </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', borderTop: '1px solid var(--border-color)', paddingTop: '16px' }}>
-                  <button 
-                    className="btn btn-secondary btn-sm" 
-                    style={{ flex: 1, padding: '8px' }} 
-                    onClick={() => handleOpenEdit(acc)}
-                  >
-                    <Edit2 size={14} /> Edit
-                  </button>
-                  <button 
-                    className="btn btn-danger btn-sm" 
-                    style={{ padding: '8px 12px' }} 
-                    onClick={() => handleDelete(acc)}
-                  >
-                    <Trash2 size={14} />
-                  </button>
                 </div>
               </div>
             );

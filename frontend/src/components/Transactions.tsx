@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useFinance } from '../context/FinanceContext';
 import { Icon } from './common/Icon';
-import { Plus, Edit2, Trash2, Search, ArrowLeftRight, Calendar, Paperclip, Download } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, ArrowLeftRight, Calendar, Paperclip, Download, Eye } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 
@@ -34,7 +34,9 @@ export const Transactions: React.FC<TransactionsProps> = ({ defaultType }) => {
   // Modal State
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<any | null>(null);
+  const [viewingTx, setViewingTx] = useState<any | null>(null);
 
   // Form State - Transaction
   const [txType, setTxType] = useState('EXPENSE');
@@ -88,6 +90,11 @@ export const Transactions: React.FC<TransactionsProps> = ({ defaultType }) => {
     setTxReceipt(tx.receiptUrl || '');
     setError('');
     setIsTxModalOpen(true);
+  };
+
+  const handleOpenViewModal = (tx: any) => {
+    setViewingTx(tx);
+    setIsViewModalOpen(true);
   };
 
   const handleOpenTransferModal = () => {
@@ -473,6 +480,13 @@ export const Transactions: React.FC<TransactionsProps> = ({ defaultType }) => {
                         <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
                           <button 
                             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'color var(--transition-fast)' }} 
+                            onClick={() => handleOpenViewModal(t)}
+                            title="View Details"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button 
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', transition: 'color var(--transition-fast)' }} 
                             onClick={() => handleOpenEditModal(t)}
                             title="Edit"
                           >
@@ -697,6 +711,100 @@ export const Transactions: React.FC<TransactionsProps> = ({ defaultType }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Transaction View Details Modal */}
+      {isViewModalOpen && viewingTx && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h2>Transaction Details</h2>
+              <button className="modal-close" onClick={() => setIsViewModalOpen(false)}>×</button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '8px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Type</span>
+                <span style={{ 
+                  fontWeight: 700, 
+                  textTransform: 'uppercase',
+                  color: viewingTx.type === 'INCOME' ? 'var(--success)' : (viewingTx.type === 'EXPENSE' ? 'var(--danger)' : 'var(--info)')
+                }}>
+                  {viewingTx.type}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Amount</span>
+                <span style={{ 
+                  fontWeight: 800, 
+                  fontSize: '1.1rem',
+                  color: viewingTx.type === 'INCOME' ? 'var(--success)' : (viewingTx.type === 'EXPENSE' ? 'var(--danger)' : 'var(--info)')
+                }}>
+                  {viewingTx.type === 'INCOME' ? '+' : (viewingTx.type === 'EXPENSE' ? '-' : '')}
+                  {formatMoney(viewingTx.amount)}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Date</span>
+                <span style={{ fontWeight: 600 }}>{new Date(viewingTx.date).toLocaleDateString()}</span>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Account</span>
+                <span style={{ fontWeight: 600 }}>
+                  {viewingTx.type === 'TRANSFER' 
+                    ? `${viewingTx.account?.name || viewingTx.accountName || '-'} ➔ ${viewingTx.toAccount?.name || viewingTx.toAccountName || '-'}` 
+                    : (viewingTx.account?.name || viewingTx.accountName || '-')}
+                </span>
+              </div>
+
+              {viewingTx.type !== 'TRANSFER' && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Category</span>
+                  <span style={{ fontWeight: 600, color: viewingTx.category?.color || 'inherit' }}>
+                    {viewingTx.category?.name || 'Uncategorized'}
+                  </span>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Notes</span>
+                <span style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', whiteSpace: 'pre-wrap' }}>
+                  {viewingTx.notes || <em style={{ color: 'var(--text-muted)' }}>No notes provided</em>}
+                </span>
+              </div>
+
+              {viewingTx.receiptUrl && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', borderBottom: '1px solid var(--border-color)', paddingBottom: '8px' }}>
+                  <span style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Receipt Attachment</span>
+                  <a href={viewingTx.receiptUrl} target="_blank" rel="noreferrer" style={{ width: 'fit-content', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.9rem', fontWeight: 600 }}>
+                    <Paperclip size={16} /> Open Receipt File
+                  </a>
+                  <div style={{ width: '100%', maxHeight: '200px', overflow: 'hidden', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', marginTop: '8px' }}>
+                    <img src={viewingTx.receiptUrl} alt="Receipt Preview" style={{ width: '100%', height: 'auto', maxHeight: '200px', objectFit: 'contain' }} onError={(e) => { (e.target as any).style.display = 'none'; }} />
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setIsViewModalOpen(false)}>Close</button>
+                <button 
+                  type="button" 
+                  className="btn btn-primary" 
+                  style={{ flex: 1 }} 
+                  onClick={() => {
+                    setIsViewModalOpen(false);
+                    handleOpenEditModal(viewingTx);
+                  }}
+                >
+                  Edit Details
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

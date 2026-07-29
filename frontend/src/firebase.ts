@@ -1,4 +1,5 @@
 import { initializeApp, getApps } from 'firebase/app';
+import { getAnalytics } from 'firebase/analytics';
 import { 
   getAuth, 
   signInWithEmailAndPassword, 
@@ -9,15 +10,17 @@ import {
 } from 'firebase/auth';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID
+  apiKey: "AIzaSyD8V-mEr5cmamYBwdyzzF9BlX8fIWL7tOI",
+  authDomain: "startup-32394.firebaseapp.com",
+  databaseURL: "https://startup-32394-default-rtdb.firebaseio.com",
+  projectId: "startup-32394",
+  storageBucket: "startup-32394.firebasestorage.app",
+  messagingSenderId: "236369447850",
+  appId: "1:236369447850:web:ceac74d2fc7d1b69b2f9d3",
+  measurementId: "G-TRN8G5J628"
 };
 
-const hasConfig = !!import.meta.env.VITE_FIREBASE_API_KEY;
+const hasConfig = true;
 
 let authInstance: any;
 let isMock = false;
@@ -26,6 +29,13 @@ if (hasConfig) {
   try {
     const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
     authInstance = getAuth(app);
+    if (typeof window !== 'undefined') {
+      try {
+        getAnalytics(app);
+      } catch (analyticsErr) {
+        console.warn('Analytics initialization failed (likely blocked or restricted):', analyticsErr);
+      }
+    }
     console.log('🔥 Real Firebase Authentication client initialized.');
   } catch (err) {
     console.error('❌ Failed to initialize Real Firebase SDK. Falling back to Mock Auth.', err);

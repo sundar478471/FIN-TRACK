@@ -43,7 +43,7 @@ export const Auth: React.FC = () => {
         // 2. Self-Heal Database & Update Profile settings in Backend
         if (firebaseUser) {
           const idToken = await firebaseUser.getIdToken();
-          const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+          const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
           await fetch(`${API_BASE_URL}/settings`, {
             method: 'PUT',
             headers: {
@@ -56,7 +56,40 @@ export const Auth: React.FC = () => {
         
         setMessage('Account created successfully! Please verify your email.');
       } else {
-        await login(email, password);
+        try {
+          await login(email, password);
+        } catch (err: any) {
+          // If login fails with invalid-credential or user-not-found, try to auto-register
+          if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.message?.includes('invalid-credential')) {
+            try {
+              console.log('User not found or credentials invalid. Attempting auto-registration...');
+              const userCredential = await register(email, password);
+              const firebaseUser = userCredential.user;
+              
+              if (firebaseUser) {
+                const idToken = await firebaseUser.getIdToken();
+                const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
+                await fetch(`${API_BASE_URL}/settings`, {
+                  method: 'PUT',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${idToken}`
+                  },
+                  body: JSON.stringify({ name: email.split('@')[0], mobileNumber: '' })
+                });
+              }
+              setMessage('Account auto-registered and logged in successfully!');
+            } catch (regErr: any) {
+              // If registration fails because the email is already in use, then the user typed the wrong password.
+              if (regErr.code === 'auth/email-already-in-use' || regErr.message?.includes('email-already-in-use')) {
+                throw err; // throw original login error (invalid password)
+              }
+              throw regErr; // throw registration error (e.g. weak password)
+            }
+          } else {
+            throw err;
+          }
+        }
       }
     } catch (err: any) {
       console.error('Auth action failed:', err);
