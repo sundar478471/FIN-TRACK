@@ -55,7 +55,6 @@ export const Transactions: React.FC<TransactionsProps> = ({ defaultType }) => {
   const [tfNotes, setTfNotes] = useState('');
 
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
   // Format money helper
   const formatMoney = (val: number) => {
@@ -115,11 +114,19 @@ export const Transactions: React.FC<TransactionsProps> = ({ defaultType }) => {
     if (txType !== 'TRANSFER' && !txCategoryId) return setError('Please select a category');
     if (!txAmount || Number(txAmount) <= 0) return setError('Please enter a valid amount');
 
-    setLoading(true);
-    try {
-      if (editingTx) {
-        // Edit Transaction
-        await updateTransaction(editingTx.id, {
+    setIsTxModalOpen(false);
+
+    const txPromise = editingTx
+      ? updateTransaction(editingTx.id, {
+          type: txType,
+          amount: Number(txAmount),
+          date: new Date(txDate).toISOString(),
+          accountId: txAccountId,
+          categoryId: txCategoryId || undefined,
+          notes: txNotes,
+          receiptUrl: txReceipt || undefined
+        })
+      : addTransaction({
           type: txType,
           amount: Number(txAmount),
           date: new Date(txDate).toISOString(),
@@ -128,24 +135,10 @@ export const Transactions: React.FC<TransactionsProps> = ({ defaultType }) => {
           notes: txNotes,
           receiptUrl: txReceipt || undefined
         });
-      } else {
-        // Add Transaction
-        await addTransaction({
-          type: txType,
-          amount: Number(txAmount),
-          date: new Date(txDate).toISOString(),
-          accountId: txAccountId,
-          categoryId: txCategoryId || undefined,
-          notes: txNotes,
-          receiptUrl: txReceipt || undefined
-        });
-      }
-      setIsTxModalOpen(false);
-    } catch (err: any) {
-      setError(err.message || 'Failed to save transaction');
-    } finally {
-      setLoading(false);
-    }
+
+    txPromise.catch((err: any) => {
+      alert(err.message || 'Failed to save transaction');
+    });
   };
 
   // Override type filter strictly if defaultType prop is set
@@ -202,15 +195,12 @@ export const Transactions: React.FC<TransactionsProps> = ({ defaultType }) => {
     if (tfFromAccount === tfToAccount) return setError('Source and target accounts cannot be the same');
     if (!tfAmount || Number(tfAmount) <= 0) return setError('Enter a valid amount');
 
-    setLoading(true);
-    try {
-      await transferFunds(tfFromAccount, tfToAccount, Number(tfAmount), tfNotes, new Date(tfDate).toISOString());
-      setIsTransferModalOpen(false);
-    } catch (err: any) {
-      setError(err.message || 'Failed to process transfer');
-    } finally {
-      setLoading(false);
-    }
+    setIsTransferModalOpen(false);
+
+    transferFunds(tfFromAccount, tfToAccount, Number(tfAmount), tfNotes, new Date(tfDate).toISOString())
+      .catch((err: any) => {
+        alert(err.message || 'Failed to process transfer');
+      });
   };
 
   const handleDelete = async (id: string) => {
@@ -618,9 +608,9 @@ export const Transactions: React.FC<TransactionsProps> = ({ defaultType }) => {
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
                 <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setIsTxModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={loading}>
-                  {loading ? 'Saving...' : 'Save'}
-                </button>
+                 <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+                   Save
+                 </button>
               </div>
             </form>
           </div>
@@ -706,9 +696,9 @@ export const Transactions: React.FC<TransactionsProps> = ({ defaultType }) => {
 
               <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
                 <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setIsTransferModalOpen(false)}>Cancel</button>
-                <button type="submit" className="btn btn-primary" style={{ flex: 1 }} disabled={loading}>
-                  {loading ? 'Processing...' : 'Transfer'}
-                </button>
+                 <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>
+                   Transfer
+                 </button>
               </div>
             </form>
           </div>

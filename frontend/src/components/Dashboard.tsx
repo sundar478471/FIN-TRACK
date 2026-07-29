@@ -20,7 +20,6 @@ export const Dashboard: React.FC = () => {
   
   const [quickAddError, setQuickAddError] = useState('');
   const [quickAddSuccess, setQuickAddSuccess] = useState('');
-  const [loading, setLoading] = useState(false);
 
   const currencySymbol = '₹';
 
@@ -69,25 +68,29 @@ export const Dashboard: React.FC = () => {
     if (!categoryId) return setQuickAddError('Select a category');
     if (!amount || Number(amount) <= 0) return setQuickAddError('Enter a valid amount');
 
-    setLoading(true);
-    try {
-      await addTransaction({
-        type,
-        amount: Number(amount),
-        date: new Date().toISOString(),
-        accountId,
-        categoryId,
-        notes: notes || `Quick Add: ${categories.find(c => c.id === categoryId)?.name}`
-      });
-      setAmount('');
-      setNotes('');
-      setQuickAddSuccess('Transaction added!');
-      setTimeout(() => setQuickAddSuccess(''), 3000);
-    } catch (err: any) {
+    const currentAmount = amount;
+    const currentNotes = notes;
+
+    // Clear inputs immediately for instant user feedback
+    setAmount('');
+    setNotes('');
+    setQuickAddSuccess('Transaction added!');
+    setTimeout(() => setQuickAddSuccess(''), 3000);
+
+    addTransaction({
+      type,
+      amount: Number(currentAmount),
+      date: new Date().toISOString(),
+      accountId,
+      categoryId,
+      notes: currentNotes || `Quick Add: ${categories.find(c => c.id === categoryId)?.name}`
+    }).catch((err: any) => {
+      // Revert values if the request fails
+      setAmount(currentAmount);
+      setNotes(currentNotes);
+      setQuickAddSuccess('');
       setQuickAddError(err.message || 'Failed to add transaction');
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   return (
@@ -222,7 +225,7 @@ export const Dashboard: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-                <button type="submit" className="btn btn-primary" style={{ padding: '12px 24px' }} disabled={loading}>
+                <button type="submit" className="btn btn-primary" style={{ padding: '12px 24px' }}>
                   Add
                 </button>
               </div>

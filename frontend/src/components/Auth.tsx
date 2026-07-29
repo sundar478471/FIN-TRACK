@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, ShieldAlert, User, Phone } from 'lucide-react';
+import { Mail, Lock, User, Phone } from 'lucide-react';
 
 export const Auth: React.FC = () => {
-  const { login, register, resetPassword, user, sendVerification, logout } = useAuth();
+  const { login, register, resetPassword } = useAuth();
   
   const [isRegister, setIsRegister] = useState(false);
   const [isForgot, setIsForgot] = useState(false);
@@ -99,6 +99,7 @@ export const Auth: React.FC = () => {
     }
   };
 
+  /*
   const handleSendVerification = async () => {
     setError('');
     setMessage('');
@@ -112,8 +113,10 @@ export const Auth: React.FC = () => {
       setLoading(false);
     }
   };
+  */
 
-  // Block screen with Verification action if email is unverified
+  // Block screen with Verification action if email is unverified (Disabled for fast workflow)
+  /*
   if (user && !user.emailVerified) {
     return (
       <div className="modal-overlay" style={{ background: 'var(--bg-primary)' }}>
@@ -143,6 +146,7 @@ export const Auth: React.FC = () => {
       </div>
     );
   }
+  */
 
   return (
     <div style={{
