@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useFinance } from '../context/FinanceContext';
 import { Icon } from './common/Icon';
-import { Bell, Menu, X, LogOut } from 'lucide-react';
+import { Bell, Menu, X, LogOut, Plus } from 'lucide-react';
 
 interface LayoutProps {
   currentTab: string;
@@ -12,7 +12,15 @@ interface LayoutProps {
 
 export const Layout: React.FC<LayoutProps> = ({ currentTab, setCurrentTab, children }) => {
   const { user, logout } = useAuth();
-  const { notifications, markNotificationRead, clearNotifications, settings } = useFinance();
+  const { 
+    notifications, 
+    markNotificationRead, 
+    clearNotifications, 
+    settings,
+    accounts,
+    categories,
+    addTransaction
+  } = useFinance();
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
@@ -22,6 +30,50 @@ export const Layout: React.FC<LayoutProps> = ({ currentTab, setCurrentTab, child
   const userDropdownRef = useRef<HTMLDivElement | null>(null);
 
   const [avatar, setAvatar] = useState<string | null>(localStorage.getItem('fintrack_avatar'));
+
+  const [isGlobalTxModalOpen, setIsGlobalTxModalOpen] = useState(false);
+  const [txType, setTxType] = useState('EXPENSE');
+  const [txAmount, setTxAmount] = useState('');
+  const [txDate, setTxDate] = useState(new Date().toISOString().split('T')[0]);
+  const [txAccountId, setTxAccountId] = useState('');
+  const [txCategoryId, setTxCategoryId] = useState('');
+  const [txNotes, setTxNotes] = useState('');
+  const [txError, setTxError] = useState('');
+
+  const openGlobalTxModal = () => {
+    setTxType('EXPENSE');
+    setTxAmount('');
+    setTxDate(new Date().toISOString().split('T')[0]);
+    setTxAccountId(accounts[0]?.id || '');
+    setTxCategoryId(categories.filter(c => c.type === 'EXPENSE')[0]?.id || '');
+    setTxNotes('');
+    setTxError('');
+    setIsGlobalTxModalOpen(true);
+  };
+
+  const handleSaveGlobalTx = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setTxError('');
+
+    if (!txAccountId) return setTxError('Please select an account');
+    if (!txCategoryId) return setTxError('Please select a category');
+    if (!txAmount || Number(txAmount) <= 0) return setTxError('Please enter a valid amount');
+
+    setIsGlobalTxModalOpen(false);
+
+    addTransaction({
+      type: txType,
+      amount: Number(txAmount),
+      date: new Date(txDate).toISOString(),
+      accountId: txAccountId,
+      categoryId: txCategoryId || undefined,
+      notes: txNotes
+    }).catch((err: any) => {
+      alert(err.message || 'Failed to save transaction');
+    });
+  };
+
+  const filteredCategories = categories.filter(c => c.type === txType);
 
   useEffect(() => {
     const handleAvatarUpdate = () => {
@@ -307,6 +359,152 @@ export const Layout: React.FC<LayoutProps> = ({ currentTab, setCurrentTab, child
         {/* Display Child Page Screen */}
         {children}
       </main>
+
+      {/* Mobile Bottom Navigation Bar & FAB */}
+      <nav className="mobile-bottom-nav">
+        <button 
+          className={`mobile-bottom-item ${currentTab === 'dashboard' ? 'active' : ''}`}
+          onClick={() => setCurrentTab('dashboard')}
+        >
+          <Icon name="Home" size={20} />
+          <span>Home</span>
+        </button>
+
+        <button 
+          className={`mobile-bottom-item ${currentTab === 'transactions' ? 'active' : ''}`}
+          onClick={() => setCurrentTab('transactions')}
+        >
+          <Icon name="History" size={20} />
+          <span>Ledger</span>
+        </button>
+
+        <div className="mobile-fab-container">
+          <button 
+            className="mobile-fab" 
+            onClick={openGlobalTxModal}
+            title="Quick Add Transaction"
+          >
+            <Plus size={24} />
+          </button>
+        </div>
+
+        <button 
+          className={`mobile-bottom-item ${currentTab === 'budgets' ? 'active' : ''}`}
+          onClick={() => setCurrentTab('budgets')}
+        >
+          <Icon name="ShieldAlert" size={20} />
+          <span>Budgets</span>
+        </button>
+
+        <button 
+          className={`mobile-bottom-item ${currentTab === 'reports' ? 'active' : ''}`}
+          onClick={() => setCurrentTab('reports')}
+        >
+          <Icon name="FileSpreadsheet" size={20} />
+          <span>Reports</span>
+        </button>
+      </nav>
+
+      {/* Global Add Transaction Modal (Mobile FAB action) */}
+      {isGlobalTxModalOpen && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="modal-content" style={{ maxWidth: '480px' }}>
+            <div className="modal-header">
+              <h2>Add Transaction</h2>
+              <button className="modal-close" onClick={() => setIsGlobalTxModalOpen(false)}>×</button>
+            </div>
+            
+            {txError && <div style={{ color: 'var(--danger)', marginBottom: '16px', fontSize: '0.85rem' }}>{txError}</div>}
+            
+            <form onSubmit={handleSaveGlobalTx}>
+              <div className="form-group">
+                <label>Type</label>
+                <select 
+                  className="input-premium" 
+                  value={txType} 
+                  onChange={(e) => {
+                    setTxType(e.target.value);
+                    setTxCategoryId(categories.filter(c => c.type === e.target.value)[0]?.id || '');
+                  }}
+                >
+                  <option value="EXPENSE">Expense</option>
+                  <option value="INCOME">Income</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Amount</label>
+                <input 
+                  type="number" 
+                  step="0.01" 
+                  placeholder="0.00" 
+                  className="input-premium"
+                  value={txAmount}
+                  onChange={(e) => setTxAmount(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Date</label>
+                <input 
+                  type="date" 
+                  className="input-premium"
+                  value={txDate}
+                  onChange={(e) => setTxDate(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Account</label>
+                <select 
+                  className="input-premium" 
+                  value={txAccountId}
+                  onChange={(e) => setTxAccountId(e.target.value)}
+                  required
+                >
+                  <option value="">-- Select Account --</option>
+                  {accounts.map(acc => (
+                    <option key={acc.id} value={acc.id}>{acc.name} (₹{acc.balance.toLocaleString()})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Category</label>
+                <select 
+                  className="input-premium" 
+                  value={txCategoryId}
+                  onChange={(e) => setTxCategoryId(e.target.value)}
+                  required
+                >
+                  <option value="">-- Select Category --</option>
+                  {filteredCategories.map(cat => (
+                    <option key={cat.id} value={cat.id}>{cat.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label>Notes</label>
+                <input 
+                  type="text" 
+                  placeholder="Optional details" 
+                  className="input-premium"
+                  value={txNotes}
+                  onChange={(e) => setTxNotes(e.target.value)}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+                <button type="button" className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setIsGlobalTxModalOpen(false)}>Cancel</button>
+                <button type="submit" className="btn btn-primary" style={{ flex: 1 }}>Save</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       
       {/* Dynamic CSS styles for toggling mobile headers */}
       <style>{`

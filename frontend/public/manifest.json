@@ -1,0 +1,22 @@
+{
+  "name": "FIN TRACK - Personal Finance & Expense Tracker",
+  "short_name": "FIN TRACK",
+  "description": "Track your expenses, incomes, budgets, and savings goals in real-time.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "/logo.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}

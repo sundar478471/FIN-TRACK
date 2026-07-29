@@ -4,11 +4,23 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/jpeg" href="/logo.jpg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#2563eb" />
+    <link rel="manifest" href="/manifest.json" />
     <title>FIN TRACK - Personal Finance & Expense Tracker</title>
     <meta name="description" content="FIN TRACK: A premium, AI-free personal finance planner and expense tracking dashboard. Monitor net balance, analyze category budgets, schedule bills, and export financial PDF/Excel ledger reports." />
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((reg) => console.log('[Service Worker] Registered successfully:', reg.scope))
+            .catch((err) => console.error('[Service Worker] Registration failed:', err));
+        });
+      }
+    </script>
   </body>
 </html>
