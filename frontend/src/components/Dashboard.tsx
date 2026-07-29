@@ -239,7 +239,7 @@ export const Dashboard: React.FC = () => {
               <p style={{ color: 'var(--text-secondary)', padding: '20px 0' }}>No transactions recorded yet.</p>
             ) : (
               <div className="table-container" style={{ border: 'none', marginTop: '12px' }}>
-                <table className="table-premium">
+                <table className="table-premium recent-transactions-table">
                   <thead>
                     <tr>
                       <th>Details</th>

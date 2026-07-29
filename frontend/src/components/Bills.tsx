@@ -240,7 +240,7 @@ export const Bills: React.FC<BillsProps> = ({ defaultView }) => {
             <p style={{ color: 'var(--text-secondary)', padding: '32px', textAlign: 'center' }}>No bills scheduled yet.</p>
           ) : (
             <div className="table-container" style={{ border: 'none', margin: '0' }}>
-              <table className="table-premium">
+              <table className="table-premium bills-table">
                 <thead>
                   <tr>
                     <th>Bill Title</th>

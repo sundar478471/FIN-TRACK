@@ -997,3 +997,202 @@ button, input, select, textarea {
     padding-bottom: 90px !important;
   }
 }
+
+/* --- FINTRACK Mobile-First Responsiveness Overrides --- */
+html, body, #root, .app-layout {
+  max-width: 100% !important;
+  width: 100vw !important;
+  overflow-x: hidden !important;
+}
+
+@media (max-width: 768px) {
+  /* Prevent horizontal scroll globally */
+  .main-content {
+    padding: 16px !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Compact top bar header widgets */
+  .mobile-header {
+    margin-bottom: 16px !important;
+    padding-bottom: 8px !important;
+  }
+
+  /* Form & Input adjustments for tap targets */
+  .input-premium, select, input, textarea {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 16px !important; /* iOS Zoom Prevention */
+    min-height: 44px !important;
+  }
+
+  /* Minimum 48px touch targets for buttons */
+  .btn, button.btn {
+    min-height: 48px !important;
+    padding: 12px 18px !important;
+    width: 100% !important; /* Stack button triggers on mobile */
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.95rem !important;
+  }
+
+  /* Header action buttons stacking */
+  .header-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+  .header-actions {
+    width: 100% !important;
+    flex-direction: column !important;
+  }
+
+  /* Form flex groups stacking */
+  form div[style*="display: flex"], 
+  form div[style*="display:grid"] {
+    flex-direction: column !important;
+    display: flex !important;
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  form div[style*="display: flex"] > *, 
+  form div[style*="display:grid"] > * {
+    width: 100% !important;
+    margin-left: 0 !important;
+  }
+
+  .quick-add-form {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .quick-add-form button {
+    height: 48px !important;
+  }
+
+  /* Modals fitting screen */
+  .modal-content {
+    width: 90% !important;
+    max-width: 440px !important;
+    margin: 20px auto !important;
+    padding: 20px !important;
+    max-height: 85vh !important;
+    overflow-y: auto !important;
+    border-radius: var(--radius-lg) !important;
+    box-shadow: var(--shadow-2xl) !important;
+  }
+
+  /* Chart sizes scaling */
+  canvas {
+    max-width: 100% !important;
+  }
+
+  /* Grid components full width */
+  .budgets-flex-layout {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .budgets-list-main, .budgets-sidebar-analytics {
+    width: 100% !important;
+    flex: none !important;
+  }
+
+  /* Category picker layout fit */
+  .category-picker-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  /* Table-to-Card conversions */
+  table.table-premium.transactions-table,
+  table.table-premium.bills-table,
+  table.table-premium.recent-transactions-table {
+    display: block !important;
+    width: 100% !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  table.table-premium.transactions-table thead,
+  table.table-premium.bills-table thead,
+  table.table-premium.recent-transactions-table thead {
+    display: none !important;
+  }
+
+  table.table-premium.transactions-table tbody,
+  table.table-premium.bills-table tbody,
+  table.table-premium.recent-transactions-table tbody {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  table.table-premium.transactions-table tr,
+  table.table-premium.bills-table tr,
+  table.table-premium.recent-transactions-table tr {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 16px !important;
+    padding: 16px !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+    background-color: var(--bg-primary) !important;
+    box-shadow: var(--shadow-sm) !important;
+  }
+
+  table.table-premium.transactions-table td,
+  table.table-premium.bills-table td,
+  table.table-premium.recent-transactions-table td {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 10px 0 !important;
+    border: none !important;
+    border-bottom: 1px dashed var(--border-color) !important;
+    text-align: right !important;
+    font-size: 0.88rem !important;
+  }
+
+  table.table-premium.transactions-table td:last-child,
+  table.table-premium.bills-table td:last-child,
+  table.table-premium.recent-transactions-table td:last-child {
+    border-bottom: none !important;
+    padding-bottom: 0 !important;
+    justify-content: center !important;
+    margin-top: 8px !important;
+  }
+
+  /* Scoped pseudo labels for cards */
+  .transactions-table td::before,
+  .bills-table td::before,
+  .recent-transactions-table td::before {
+    font-weight: 700 !important;
+    color: var(--text-muted) !important;
+    float: left !important;
+    text-transform: uppercase !important;
+    font-size: 0.72rem !important;
+    letter-spacing: 0.05em !important;
+    margin-right: 12px !important;
+  }
+
+  .transactions-table td:nth-of-type(1)::before { content: "Category / Type"; }
+  .transactions-table td:nth-of-type(2)::before { content: "Notes"; }
+  .transactions-table td:nth-of-type(3)::before { content: "Account"; }
+  .transactions-table td:nth-of-type(4)::before { content: "Date"; }
+  .transactions-table td:nth-of-type(5)::before { content: "Receipt"; }
+  .transactions-table td:nth-of-type(6)::before { content: "Amount"; }
+  .transactions-table td:nth-of-type(7)::before { content: "Actions"; }
+
+  .bills-table td:nth-of-type(1)::before { content: "Bill Title"; }
+  .bills-table td:nth-of-type(2)::before { content: "Due Date"; }
+  .bills-table td:nth-of-type(3)::before { content: "Frequency"; }
+  .bills-table td:nth-of-type(4)::before { content: "Status"; }
+  .bills-table td:nth-of-type(5)::before { content: "Amount"; }
+  .bills-table td:nth-of-type(6)::before { content: "Actions"; }
+
+  .recent-transactions-table td:nth-of-type(1)::before { content: "Details"; }
+  .recent-transactions-table td:nth-of-type(2)::before { content: "Account"; }
+  .recent-transactions-table td:nth-of-type(3)::before { content: "Date"; }
+  .recent-transactions-table td:nth-of-type(4)::before { content: "Amount"; }
+}

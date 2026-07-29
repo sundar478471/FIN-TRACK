@@ -381,7 +381,7 @@ export const Transactions: React.FC<TransactionsProps> = ({ defaultType }) => {
           <p style={{ color: 'var(--text-secondary)', padding: '32px', textAlign: 'center' }}>No transactions match your current search filters.</p>
         ) : (
           <div className="table-container" style={{ border: 'none', margin: '0' }}>
-            <table className="table-premium">
+            <table className="table-premium transactions-table">
               <thead>
                 <tr>
                   <th>Category / Type</th>
